@@ -1,0 +1,15 @@
+{
+  "name": "codecrush",
+  "version": "1.0.0",
+  "description": "a place where developers can connect",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js"
+  },
+  "author": "Sachin Singh",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
