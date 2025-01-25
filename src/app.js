@@ -7,7 +7,32 @@ const User = require('./models/user');
 app.use(express.json());
 const {validateSignUpData} = require('./utils/validation');
 const bcrypt = require('bcrypt');
+const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
 
+
+app.use(cookieParser());
+
+app.get('/profile',async (req, res) => {
+    const cookies = req.cookies;
+    const {token} = cookies;
+    try{
+        if(!token){
+            throw new Error("invalid token");
+        }
+        const decodedMessage = await jwt.verify(token, "codecrush@123456789");
+        const {_id} = decodedMessage;
+        const user = await User.findById(_id);
+        if(!user){
+            throw new Error("User not found");
+        }
+        res.send(user);
+    }
+    catch(err){
+        res.send(`Error: ${err.message}`);
+    }
+    
+});
 app.post('/login', async (req, res) => {
     const { emailId, password } = req.body;
     try {
@@ -19,6 +44,15 @@ app.post('/login', async (req, res) => {
         if (!isMatch) {
             return res.status(400).send("Invalid Credentials");
         }
+
+        //create a JWT token 
+        const token = await jwt.sign({_id: user._id}, "codecrush@123456789");
+        res.cookie("token", token);
+
+        //add the token to cookie and send the response
+
+
+
         res.send("User logged in successfully");
     } catch (err) {
         res.status(400).send(`Error occurred while logging in: ${err.message}`);
