@@ -5,15 +5,46 @@ const app = express();
 var port = 3000;
 const User = require('./models/user');
 app.use(express.json());
+const {validateSignUpData} = require('./utils/validation');
+const bcrypt = require('bcrypt');
 
-app.post('/signup', (req, res) => {
-    console.log(req.body);
-    const user = new User(req.body);
-    user.save().then(() => {
+app.post('/login', async (req, res) => {
+    const { emailId, password } = req.body;
+    try {
+        const user = await User.findOne({ emailId });
+        if (!user) {
+            return res.status(404).send("Invalid Credentials");
+        }
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).send("Invalid Credentials");
+        }
+        res.send("User logged in successfully");
+    } catch (err) {
+        res.status(400).send(`Error occurred while logging in: ${err.message}`);
+    }
+});
+
+app.post('/signup',async (req, res) => {
+    try{
+        //data validation
+        validateSignUpData(req);
+        //password encryption
+        console.log(req.body);
+        const { firstName, lastName, emailId, password} = req.body;
+        const hashPassword = await bcrypt.hash(password, 10);
+        const user = new User({
+            firstName,
+            lastName,
+            emailId,
+            password: hashPassword,
+        });
+        await user.save();
         res.send("User created successfully");
-    }).catch((err) => {
+    }
+    catch(err){
         res.send(`User creation failed: ${err.message}`);
-    });
+    };
 });
 
 app.get('/user', async (req, res) => {
@@ -46,7 +77,7 @@ app.patch('/user/:userId', async (req, res) => {
     const data = req.body;
     
     try {
-        const allowedUpdates = ["firstName", "lastName", "password", "age", "photoUrl", "aboutMe", "skills"];
+        const allowedUpdates = ["firstName", "lastName", "password", "age", "photoUrl", "aboutMe", "skills", "gender"];
         const isUpdateAllowed = Object.keys(data).every((k) => allowedUpdates.includes(k));
         if(!isUpdateAllowed){
             throw new Error("Invalid updates");
