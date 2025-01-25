@@ -41,10 +41,16 @@ app.get('/feed', async (req, res) => {
     }
 });
 
-app.patch('/user', async (req, res) => {
-    const userId = req.body.userId;
+app.patch('/user/:userId', async (req, res) => {
+    const userId = req.params?.userId;
     const data = req.body;
+    
     try {
+        const allowedUpdates = ["firstName", "lastName", "password", "age", "photoUrl", "aboutMe", "skills"];
+        const isUpdateAllowed = Object.keys(data).every((k) => allowedUpdates.includes(k));
+        if(!isUpdateAllowed){
+            throw new Error("Invalid updates");
+        }
         const user = await User.findByIdAndUpdate(userId, data,
             {
                 returnDocument: "after",
