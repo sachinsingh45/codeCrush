@@ -4,60 +4,13 @@ const connectDB = require('./config/database');
 const app = express();
 var port = 3000;
 const User = require('./models/user');
-app.use(express.json());
 const {validateSignUpData} = require('./utils/validation');
 const bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
-
-
+const {userAuth} = require("./middlewares/auth");
+app.use(express.json());
 app.use(cookieParser());
-
-app.get('/profile',async (req, res) => {
-    const cookies = req.cookies;
-    const {token} = cookies;
-    try{
-        if(!token){
-            throw new Error("invalid token");
-        }
-        const decodedMessage = await jwt.verify(token, "codecrush@123456789");
-        const {_id} = decodedMessage;
-        const user = await User.findById(_id);
-        if(!user){
-            throw new Error("User not found");
-        }
-        res.send(user);
-    }
-    catch(err){
-        res.send(`Error: ${err.message}`);
-    }
-    
-});
-app.post('/login', async (req, res) => {
-    const { emailId, password } = req.body;
-    try {
-        const user = await User.findOne({ emailId });
-        if (!user) {
-            return res.status(404).send("Invalid Credentials");
-        }
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).send("Invalid Credentials");
-        }
-
-        //create a JWT token 
-        const token = await jwt.sign({_id: user._id}, "codecrush@123456789");
-        res.cookie("token", token);
-
-        //add the token to cookie and send the response
-
-
-
-        res.send("User logged in successfully");
-    } catch (err) {
-        res.status(400).send(`Error occurred while logging in: ${err.message}`);
-    }
-});
 
 app.post('/signup',async (req, res) => {
     try{
@@ -80,73 +33,39 @@ app.post('/signup',async (req, res) => {
         res.send(`User creation failed: ${err.message}`);
     };
 });
-
-app.get('/user', async (req, res) => {
-    const userEmail = req.query.emailId; 
-    try {
-        const user = await User.find({ emailId: userEmail });
-        if (user.length < 1) {
-            return res.status(404).send("No user found with this email");
-        }
+app.get('/profile',userAuth, async (req, res) => {
+    try{
+        const user = req.user;
         res.send(user);
-    } catch (err) {
-        res.status(400).send(`Error occurred while fetching user: ${err.message}`);
     }
-});
-
-app.get('/feed', async (req, res) => {
-    try {
-        const users = await User.find({});
-        if (users.length < 1) {
-            return res.status(404).send("No users found");
-        }
-        res.send(users);
-    } catch (err) {
-        res.status(400).send(`Error occurred while fetching users: ${err.message}`);
+    catch(err){
+        res.status(400).send(`Error: ${err.message}`);
     }
-});
-
-app.patch('/user/:userId', async (req, res) => {
-    const userId = req.params?.userId;
-    const data = req.body;
     
+});
+app.post('/login', async (req, res) => {
+    const { emailId, password } = req.body;
     try {
-        const allowedUpdates = ["firstName", "lastName", "password", "age", "photoUrl", "aboutMe", "skills", "gender"];
-        const isUpdateAllowed = Object.keys(data).every((k) => allowedUpdates.includes(k));
-        if(!isUpdateAllowed){
-            throw new Error("Invalid updates");
+        const user = await User.findOne({ emailId });
+        if (!user) {
+            return res.status(404).send("Invalid Credentials");
         }
-        const user = await User.findByIdAndUpdate(userId, data,
-            {
-                returnDocument: "after",
-                runValidators: true,
-            }
-        );
-        console.log(user);
-        res.send("User updated successfully");
+        const isMatch = await user.validatePassword(password);
+        if (!isMatch) {
+            return res.status(400).send("Invalid Credentials");
+        }
+        //create a JWT token 
+        const token = await user.getJwt();
+        //add the token to cookie and send the response
+        res.cookie("token", token, {httpOnly:true, secure: true, expires: new Date(Date.now() + 1000*60*60*24*2)});
+        res.send("User logged in successfully");
     } catch (err) {
-        res.send(`Something went wrong in updating the user: ${err.message}`);
+        res.status(400).send(`Error occurred while logging in: ${err.message}`);
     }
 });
-
-app.delete('/user', async (req, res) => {
-    const userId = req.body.userId;
-    try {
-        const user = await User.findByIdAndDelete(userId);
-        res.send("User deleted");
-    } catch (err) {
-        res.send(`Something went wrong in deleting the user: ${err.message}`);
-    }
-});
-
-app.delete('/deleteUser', async (req, res) => {
-    const emailId = req.body.emailId;
-    try {
-        const user = await User.deleteMany({ emailId: emailId });
-        res.send("User deleted");
-    } catch (err) {
-        res.send(`Something went wrong in deleting the user: ${err.message}`);
-    }
+app.post('/sendConnectionRequest',userAuth, (req, res)=>{
+    const user = req.user;
+    res.send(user.firstName + " sent connection request successfully");
 });
 connectDB().then(() => {
     console.log("Database connected");

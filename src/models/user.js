@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 // Helper function to validate email format
 // const validateEmail = (email) => {
@@ -101,5 +103,18 @@ const userSchema = new mongoose.Schema(
         timestamps: true,
     }
 );
+
+userSchema.methods.getJwt = async function(){
+    //this keyword will not work in arrow function
+    const token = await jwt.sign({_id: this._id}, "codecrush@123456789",{
+        expiresIn: "2 days"
+    });
+    return token;
+}
+userSchema.methods.validatePassword = async function(password){
+    // this.password is the hashed password stored in the database
+    const isMatch = await bcrypt.compare(password, this.password);
+        return isMatch;
+}
 const User = mongoose.model('User', userSchema);
 module.exports = User;
