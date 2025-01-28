@@ -83,7 +83,7 @@ const userSchema = new mongoose.Schema(
                 }
             }
         },
-        aboutMe: {
+        about: {
             type: String,
             trim: true,
             maxlength: [500, "About me section cannot exceed 500 characters"],
@@ -104,7 +104,7 @@ const userSchema = new mongoose.Schema(
     }
 );
 
-userSchema.methods.getJwt = async function(){
+userSchema.methods.getJWT = async function(){
     //this keyword will not work in arrow function
     const token = await jwt.sign({_id: this._id}, "codecrush@123456789",{
         expiresIn: "2 days"

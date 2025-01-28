@@ -14,4 +14,26 @@ const validateSignUpData = (req) => {
         // return "Password must contain at least one uppercase letter, one lowercase letter, one number, one special character and minimum length of 8 characters";
     }
 };
-module.exports = {validateSignUpData,};    
+const validateEditProfileData = (req) => {
+    const allowedEditFields = [
+      "firstName",
+      "lastName",
+      "emailId",
+      "photoUrl",
+      "gender",
+      "age",
+      "about",
+      "skills",
+    ];
+  
+    const isEditAllowed = Object.keys(req.body).every((field) =>
+      allowedEditFields.includes(field)
+    );
+  
+    return isEditAllowed;
+};
+  
+module.exports = {
+    validateSignUpData,
+    validateEditProfileData,
+}; 
