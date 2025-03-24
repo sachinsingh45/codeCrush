@@ -3,7 +3,6 @@ const connectDB = require("./config/database");
 const app = express();
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
-
 app.use(express.json());
 app.use(cookieParser());
 
@@ -39,8 +38,10 @@ app.use("/", userRouter);
 connectDB()
   .then(() => {
     console.log("Database connection established...");
-    app.listen(3000, () => {
-      console.log("Server is successfully listening on port 3000");
+    const port = process.env.PORT || 5000;
+    server.listen(port, () => {
+      // ✅ Use backticks (`) for variable interpolation
+      console.log(`Server is successfully listening on port ${port}...`);
     });
   })
   .catch((err) => {
