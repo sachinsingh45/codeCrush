@@ -1,13 +1,12 @@
-const mongoose = require('mongoose');
+const mongoose = require('mongoose'); 
 const validator = require('validator');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-// Helper function to validate email format
-// const validateEmail = (email) => {
-//     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-//     return regex.test(email);
-// };
+// Helper function to create an avatar URL using Robohash
+const generateAvatar = (text) => {
+    return `https://robohash.org/${encodeURIComponent(text)}?set=set1`;
+};
 
 const userSchema = new mongoose.Schema(
     {
@@ -36,24 +35,11 @@ const userSchema = new mongoose.Schema(
                 if(!validator.isEmail(value)){
                     throw new Error('Email is invalid '+value);
                 }
-            }
-            // validate: {
-            //     validator: validateEmail,
-            //     message: "Invalid email format",
-            // },
+            },
         },
         password: {
             type: String,
             required: [true, "Password is required"],
-            // minlength: [8, "Password must be at least 8 characters long"],
-            // validate: {
-            //     validator: function (v) {
-            //         // At least one uppercase, one lowercase, one number, and one special character and Minimum length of 8 characters.
-            //         return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(v);
-            //     },
-            //     message:
-            //         "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
-            // },
         },
         age: {
             type: Number,
@@ -70,16 +56,14 @@ const userSchema = new mongoose.Schema(
         },
         photoUrl: {
             type: String,
-            default: "https://png.pngtree.com/png-vector/20190710/ourlarge/pngtree-user-vector-avatar-png-image_1541962.jpg",
-            // validate: {
-            //     validator: function (v) {
-            //         return /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|svg|webp))$/.test(v);
-            //     },
-            //     message: "Photo URL must be a valid image URL",
-            // },
+            default: function() {
+                // Use first name and last name initials to generate a unique avatar
+                const avatarText = `${this.firstName} ${this.lastName}`.trim();
+                return generateAvatar(avatarText || "default-avatar");
+            },
             validate(value){
                 if(!validator.isURL(value)){
-                    throw new Error('URL is invalid '+value);
+                    throw new Error('URL is invalid ' + value);
                 }
             }
         },
@@ -104,17 +88,18 @@ const userSchema = new mongoose.Schema(
     }
 );
 
+// JWT and password validation methods
 userSchema.methods.getJWT = async function(){
-    //this keyword will not work in arrow function
     const token = await jwt.sign({_id: this._id}, "codecrush@123456789",{
         expiresIn: "2 days"
     });
     return token;
-}
+};
+
 userSchema.methods.validatePassword = async function(password){
-    // this.password is the hashed password stored in the database
     const isMatch = await bcrypt.compare(password, this.password);
-        return isMatch;
-}
+    return isMatch;
+};
+
 const User = mongoose.model('User', userSchema);
 module.exports = User;
