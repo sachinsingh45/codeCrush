@@ -49,10 +49,10 @@ const userSchema = new mongoose.Schema(
         gender: {
             type: String,
             enum: {
-                values: ["male", "female", "other"],
+                values: ["Male", "Female", "Other"],
                 message: "Gender must be either 'male', 'female', or 'other'",
             },
-            default: "other",
+            default: "Other",
         },
         photoUrl: {
             type: String,

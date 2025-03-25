@@ -6,6 +6,7 @@ const cors = require("cors");
 app.use(express.json());
 app.use(cookieParser());
 
+require("dotenv").config();
 app.use(
   cors({
     origin: "http://localhost:5173",
@@ -38,12 +39,12 @@ app.use("/", userRouter);
 connectDB()
   .then(() => {
     console.log("Database connection established...");
-    const port = process.env.PORT || 5000;
-    server.listen(port, () => {
+    const port = 3000;
+    app.listen(port, () => {
       // ✅ Use backticks (`) for variable interpolation
       console.log(`Server is successfully listening on port ${port}...`);
     });
   })
   .catch((err) => {
-    console.error("Database cannot be connected!!");
+    console.error("Database cannot be connected!!" , err);
   });
