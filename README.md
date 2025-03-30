@@ -1,4 +1,4 @@
-# CodeCrush - Frontend & Backend
+# CodeCrush - Backend
 
 CodeCrush is a platform where coders and developers can **connect and communicate** in real-time. The frontend is built using **React.js**, powered by **Vite** for fast development, and styled with **Tailwind CSS**. The backend is built with **Node.js** and **Express**, using **MongoDB** for data storage and **Socket.io** for real-time interactions.
 
@@ -37,7 +37,7 @@ CodeCrush is a platform where coders and developers can **connect and communicat
 ### Frontend Setup:
 ```bash
 # Clone the frontend repository
-git clone https://github.com/your-username/codecrush-frontend.git
+git clone https://github.com/sachinsingh45/codeCrush-frontend.git
 cd codecrush-frontend
 
 # Install dependencies
@@ -50,7 +50,7 @@ npm run dev
 ### Backend Setup:
 ```bash
 # Clone the backend repository
-git clone https://github.com/your-username/codecrush-backend.git
+git clone https://github.com/sachinsingh45/codeCrush.git
 cd codecrush-backend
 
 # Install dependencies
