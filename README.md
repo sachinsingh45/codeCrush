@@ -12,7 +12,7 @@ CodeCrush is a platform where coders and developers can **connect and communicat
 - **User Match History Storage in MongoDB**
 
 ## Tech Stack 🛠️
-### Frontend:
+### Frontend:  [CodeCrush-fontend](https://github.com/sachinsingh45/codeCrush-frontend)
 - **React.js** (v19)
 - **Vite** (Fast development server)
 - **Tailwind CSS** & **DaisyUI** (For UI styling)
