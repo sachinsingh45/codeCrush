@@ -440,10 +440,13 @@ router.get('/users/:userId/blogs', async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const filter = { 
-            author: req.params.userId,
-            status: 'published'
-        };
+        let filter = { author: req.params.userId };
+        const status = req.query.status;
+        if (!status || status === 'published') {
+            filter.status = 'published';
+        } else if (status === 'draft') {
+            filter.status = 'draft';
+        } // if status === 'all', do not filter by status
 
         const blogs = await Blog.find(filter)
             .populate('author', 'firstName lastName photoUrl')

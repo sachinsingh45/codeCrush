@@ -89,4 +89,18 @@ userRouter.get("/feed", userAuth, async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 });
+
+// Get public user details by ID
+userRouter.get("/users/:id", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select(USER_SAFE_DATA);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({ data: user });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
 module.exports = userRouter;
