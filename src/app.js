@@ -43,3 +43,9 @@ connectDB()
   .catch((err) => {
     console.error("Database cannot be connected!!");
   });
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: "An unexpected error occurred. Please try again." });
+});

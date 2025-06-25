@@ -82,6 +82,26 @@ const userSchema = new mongoose.Schema(
                 message: "Skills cannot exceed 10 entries",
             },
         },
+        linkedin: {
+            type: String,
+            trim: true,
+            validate: {
+                validator: function (v) {
+                    return !v || validator.isURL(v);
+                },
+                message: 'LinkedIn must be a valid URL',
+            },
+        },
+        github: {
+            type: String,
+            trim: true,
+            validate: {
+                validator: function (v) {
+                    return !v || validator.isURL(v);
+                },
+                message: 'GitHub must be a valid URL',
+            },
+        },
     },
     { 
         timestamps: true,
