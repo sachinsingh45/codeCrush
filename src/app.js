@@ -10,9 +10,9 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",          
-      "https://code-crush-frontend-psi.vercel.app/", 
-      "https://code-crush-frontend-git-main-sachin-singhs-projects-a8578191.vercel.app/",
-      "https://code-crush-frontend-i990ukqz7-sachin-singhs-projects-a8578191.vercel.app/"     
+      "https://code-crush-frontend-psi.vercel.app", 
+      "https://code-crush-frontend-git-main-sachin-singhs-projects-a8578191.vercel.app",
+      "https://code-crush-frontend-i990ukqz7-sachin-singhs-projects-a8578191.vercel.app"     
     ],
     credentials: true,
   })
