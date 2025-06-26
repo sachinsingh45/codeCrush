@@ -8,10 +8,15 @@ const http = require("http");
 require("dotenv").config();
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: [
+      "http://localhost:5173",          
+      "https://your-frontend.netlify.app", 
+      "https://www.yourfrontend.com"     
+    ],
     credentials: true,
   })
 );
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -22,6 +27,7 @@ const userRouter = require("./routes/user");
 const blogRouter = require("./routes/blog");
 const initializeSocket = require("./utils/socket");
 const chatRouter = require("./routes/chat");
+const codeReviewRouter = require("./routes/codeReview");
 
 app.use("/", authRouter);
 app.use("/", profileRouter);
@@ -29,6 +35,7 @@ app.use("/", requestRouter);
 app.use("/", userRouter);
 app.use("/", blogRouter);
 app.use("/", chatRouter);
+app.use("/code-review", codeReviewRouter);
 
 const server = http.createServer(app);
 initializeSocket(server);

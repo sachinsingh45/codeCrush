@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const validator = require('validator');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { Schema } = require('mongoose');
 
 // Helper function to create an avatar URL using Robohash
 const generateAvatar = (text) => {
@@ -102,6 +103,8 @@ const userSchema = new mongoose.Schema(
                 message: 'GitHub must be a valid URL',
             },
         },
+        codeSnippetIds: [{ type: Schema.Types.ObjectId, ref: 'CodeSnippet', default: [] }],
+        codeReviewIds: [{ type: Schema.Types.ObjectId, ref: 'SnippetReview', default: [] }],
     },
     { 
         timestamps: true,
@@ -120,6 +123,23 @@ userSchema.methods.validatePassword = async function(password){
     const isMatch = await bcrypt.compare(password, this.password);
     return isMatch;
 };
+
+userSchema.virtual('codeSnippetsPublished', {
+  ref: 'CodeSnippet',
+  localField: '_id',
+  foreignField: 'author',
+  justOne: false
+});
+
+userSchema.virtual('codeSnippetsReviewed', {
+  ref: 'SnippetReview',
+  localField: '_id',
+  foreignField: 'reviewer',
+  justOne: false
+});
+
+userSchema.set('toObject', { virtuals: true });
+userSchema.set('toJSON', { virtuals: true });
 
 const User = mongoose.model('User', userSchema);
 module.exports = User;

@@ -1,5 +1,6 @@
 const express = require("express");
 const userRouter = express.Router();
+const mongoose = require('mongoose');
 
 const { userAuth } = require("../middlewares/auth");
 const ConnectionRequest = require("../models/connectionRequest");
@@ -96,7 +97,10 @@ userRouter.get("/feed", userAuth, async (req, res) => {
 // Get public user details by ID
 userRouter.get("/users/:id", async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select(USER_SAFE_DATA);
+    const user = await User.findById(req.params.id)
+      .select(USER_SAFE_DATA + ' codeSnippetIds codeReviewIds')
+      .populate('codeSnippetIds')
+      .populate('codeReviewIds');
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -115,6 +119,67 @@ userRouter.get("/user/relationship/:otherUserId", userAuth, async (req, res) => 
     res.json({ status });
   } catch (err) {
     res.status(400).json({ message: err.message });
+  }
+});
+
+// Leaderboard endpoint: returns users sorted by upvotesGained, excluding the current user
+userRouter.get('/leaderboard', userAuth, async (req, res) => {
+  try {
+    let users = await User.find({}, 'firstName lastName xp upvotesGained photoUrl');
+    users = users.map(u => ({
+      ...u.toObject(),
+      upvotesGained: typeof u.upvotesGained === 'number' ? u.upvotesGained : 0
+    }));
+    // Sort all users by upvotesGained descending
+    users.sort((a, b) => b.upvotesGained - a.upvotesGained);
+    // Exclude current user if there are at least 5 others
+    let filtered = users.filter(u => u._id.toString() !== req.user._id.toString());
+    if (filtered.length >= 5) {
+      users = filtered.slice(0, 5);
+    } else {
+      // If less than 5 others, include current user to fill up to 5
+      users = users.slice(0, 5);
+    }
+    res.json({ users });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch leaderboard' });
+  }
+});
+
+// Review stats endpoint: returns review stats for a user
+userRouter.get('/review-stats/:userId', async (req, res) => {
+  try {
+    const SnippetReview = require('../models/snippetReview');
+    const CodeSnippet = require('../models/codeSnippet');
+    const userId = req.params.userId;
+    const userObjId = mongoose.Types.ObjectId.isValid(userId) ? mongoose.Types.ObjectId(userId) : null;
+    // Build query to match both string and ObjectId
+    const reviewerQuery = userObjId ? { $or: [{ reviewer: userId }, { reviewer: userObjId }] } : { reviewer: userId };
+    const authorQuery = userObjId ? { $or: [{ author: userId }, { author: userObjId }] } : { author: userId };
+    // Logging for debugging
+    console.log('userId:', userId);
+    console.log('reviewerQuery:', reviewerQuery);
+    console.log('authorQuery:', authorQuery);
+    // Total reviews written
+    const totalReviews = await SnippetReview.countDocuments(reviewerQuery) || 0;
+    const reviews = await SnippetReview.find(reviewerQuery);
+    console.log('reviews:', reviews);
+    // Total upvotes received on reviews
+    const totalReviewUpvotes = reviews.reduce((sum, r) => sum + (r.upvotes || 0), 0);
+    // Total code snippets reviewed (unique snippets)
+    const totalSnippetsReviewed = new Set(reviews.map(r => String(r.snippet))).size || 0;
+    // Total code reviews asked (snippets authored)
+    const totalCodeReviewsAsked = await CodeSnippet.countDocuments(authorQuery) || 0;
+    const codeSnippets = await CodeSnippet.find(authorQuery);
+    console.log('codeSnippets:', codeSnippets);
+    res.json({
+      totalReviews,
+      totalReviewUpvotes,
+      totalSnippetsReviewed,
+      totalCodeReviewsAsked
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch review stats' });
   }
 });
 
