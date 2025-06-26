@@ -29,6 +29,9 @@ authRouter.post("/signup", async (req, res) => {
 
     res.cookie("token", token, {
       expires: new Date(Date.now() + 8 * 3600000),
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      httpOnly: true
     });
 
     res.json({ message: "User Added successfully!", data: savedUser });
@@ -52,6 +55,9 @@ authRouter.post("/login", async (req, res) => {
 
       res.cookie("token", token, {
         expires: new Date(Date.now() + 8 * 3600000),
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        httpOnly: true
       });
       res.send(user);
     } else {
@@ -65,6 +71,9 @@ authRouter.post("/login", async (req, res) => {
 authRouter.post("/logout", async (req, res) => {
   res.cookie("token", null, {
     expires: new Date(Date.now()),
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    httpOnly: true
   });
   res.send("Logout Successful!!");
 });

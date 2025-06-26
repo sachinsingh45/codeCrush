@@ -21,6 +21,19 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
+// Security headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
 const authRouter = require("./routes/auth");
 const profileRouter = require("./routes/profile");
 const requestRouter = require("./routes/request");
@@ -54,6 +67,13 @@ connectDB()
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: "An unexpected error occurred. Please try again." });
+  console.error('Error:', err.message);
+  console.error('Stack:', err.stack);
+  
+  // Don't expose internal errors in production
+  const message = process.env.NODE_ENV === 'production' 
+    ? "An unexpected error occurred. Please try again." 
+    : err.message;
+    
+  res.status(500).json({ message });
 });
