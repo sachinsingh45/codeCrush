@@ -10,6 +10,8 @@ const getSecretRoomId = (userId, targetUserId) => {
     .digest("hex");
 };
 
+const onlineUsers = new Map();
+
 const initializeSocket = (server) => {
   const io = socket(server, {
     cors: {
@@ -27,49 +29,86 @@ const initializeSocket = (server) => {
   console.log('Socket.io server initialized with CORS origins:', io.engine.opts.cors.origin);
 
   io.on("connection", (socket) => {
-    console.log('Client connected:', socket.id, 'from:', socket.handshake.headers.origin);
-    
-    socket.on("joinChat", ({ firstName, userId, targetUserId }) => {
+    // Track userId for this socket
+    let currentUserId = null;
+
+    // Emit the current list of online users to the newly connected client
+    socket.emit("onlineUsers", Array.from(onlineUsers.keys()));
+
+    // Handle userConnected event for global online status
+    socket.on("userConnected", ({ userId }) => {
+      if (userId) {
+        currentUserId = userId;
+        onlineUsers.set(userId, socket.id);
+        io.emit("userOnline", { userId });
+      }
+    });
+
+    socket.on("joinChat", async ({ firstName, userId, targetUserId }) => {
       const roomId = getSecretRoomId(userId, targetUserId);
-      console.log(firstName + " joined Room : " + roomId);
       socket.join(roomId);
+      currentUserId = userId;
+      // Mark user as online
+      onlineUsers.set(userId, socket.id);
+      // Broadcast online status to all participants
+      io.emit("userOnline", { userId });
     });
 
     socket.on(
       "sendMessage",
       async ({ firstName, lastName, userId, targetUserId, text }) => {
-        // Save messages to the database
         try {
           const roomId = getSecretRoomId(userId, targetUserId);
-          console.log(firstName + " " + text);
-
-          // TODO: Check if userId & targetUserId are friends
-
           let chat = await Chat.findOne({
             participants: { $all: [userId, targetUserId] },
           });
-
           if (!chat) {
             chat = new Chat({
               participants: [userId, targetUserId],
               messages: [],
             });
           }
-
           chat.messages.push({
             senderId: userId,
             text,
+            seenBy: [userId], // Only sender has seen it
           });
-
           await chat.save();
-          io.to(roomId).emit("messageReceived", { firstName, lastName, text });
+          const lastMsg = chat.messages[chat.messages.length - 1];
+          io.to(roomId).emit("messageReceived", { firstName, lastName, text, updatedAt: lastMsg.createdAt });
+          // Emit unseen count to target user
+          emitUnseenCount(io, targetUserId);
         } catch (err) {
           console.log(err);
         }
       }
     );
 
+    // Mark all messages as seen in a chat
+    socket.on("markAsSeen", async ({ userId, targetUserId }) => {
+      try {
+        const chat = await Chat.findOne({ participants: { $all: [userId, targetUserId] } });
+        if (chat) {
+          let updated = false;
+          chat.messages.forEach(msg => {
+            if (!msg.seenBy.includes(userId)) {
+              msg.seenBy.push(userId);
+              updated = true;
+            }
+          });
+          if (updated) await chat.save();
+        }
+        emitUnseenCount(io, userId);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
     socket.on("disconnect", (reason) => {
+      if (currentUserId) {
+        onlineUsers.delete(currentUserId);
+        io.emit("userOffline", { userId: currentUserId });
+      }
       console.log('Client disconnected:', socket.id, 'Reason:', reason);
     });
     
@@ -78,5 +117,17 @@ const initializeSocket = (server) => {
     });
   });
 };
+
+// Helper to emit unseen message count for all chats of a user
+async function emitUnseenCount(io, userId) {
+  const chats = await Chat.find({ participants: userId });
+  const unseenCounts = {};
+  chats.forEach(chat => {
+    const otherId = chat.participants.find(id => id.toString() !== userId);
+    const unseen = chat.messages.filter(msg => !msg.seenBy.includes(userId)).length;
+    unseenCounts[otherId] = unseen;
+  });
+  io.to(onlineUsers.get(userId)).emit("unseenCounts", unseenCounts);
+}
 
 module.exports = initializeSocket;
