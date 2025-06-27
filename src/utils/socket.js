@@ -13,11 +13,22 @@ const getSecretRoomId = (userId, targetUserId) => {
 const initializeSocket = (server) => {
   const io = socket(server, {
     cors: {
-      origin: "http://localhost:5173",
+      origin: [
+        "http://localhost:5173",
+        "https://code-crush-frontend-psi.vercel.app", 
+        "https://code-crush-frontend-git-main-sachin-singhs-projects-a8578191.vercel.app",
+        "https://code-crush-frontend-i990ukqz7-sachin-singhs-projects-a8578191.vercel.app"
+      ],
+      credentials: true,
+      methods: ["GET", "POST"]
     },
   });
 
+  console.log('Socket.io server initialized with CORS origins:', io.engine.opts.cors.origin);
+
   io.on("connection", (socket) => {
+    console.log('Client connected:', socket.id, 'from:', socket.handshake.headers.origin);
+    
     socket.on("joinChat", ({ firstName, userId, targetUserId }) => {
       const roomId = getSecretRoomId(userId, targetUserId);
       console.log(firstName + " joined Room : " + roomId);
@@ -58,7 +69,13 @@ const initializeSocket = (server) => {
       }
     );
 
-    socket.on("disconnect", () => {});
+    socket.on("disconnect", (reason) => {
+      console.log('Client disconnected:', socket.id, 'Reason:', reason);
+    });
+    
+    socket.on("error", (error) => {
+      console.error('Socket error:', error);
+    });
   });
 };
 

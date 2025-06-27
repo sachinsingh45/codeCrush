@@ -34,6 +34,22 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Socket health check endpoint
+app.get('/socket-health', (req, res) => {
+  res.json({ 
+    status: 'Socket server is running',
+    timestamp: new Date().toISOString(),
+    cors: {
+      origins: [
+        "http://localhost:5173",
+        "https://code-crush-frontend-psi.vercel.app", 
+        "https://code-crush-frontend-git-main-sachin-singhs-projects-a8578191.vercel.app",
+        "https://code-crush-frontend-i990ukqz7-sachin-singhs-projects-a8578191.vercel.app"
+      ]
+    }
+  });
+});
+
 const authRouter = require("./routes/auth");
 const profileRouter = require("./routes/profile");
 const requestRouter = require("./routes/request");
