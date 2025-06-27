@@ -75,7 +75,13 @@ const initializeSocket = (server) => {
           });
           await chat.save();
           const lastMsg = chat.messages[chat.messages.length - 1];
-          io.to(roomId).emit("messageReceived", { firstName, lastName, text, updatedAt: lastMsg.createdAt });
+          io.to(roomId).emit("messageReceived", {
+            firstName,
+            lastName,
+            text,
+            createdAt: lastMsg.createdAt,
+            updatedAt: lastMsg.updatedAt
+          });
           // Emit unseen count to target user
           emitUnseenCount(io, targetUserId);
         } catch (err) {
