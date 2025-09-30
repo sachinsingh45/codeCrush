@@ -2,7 +2,7 @@
   "name": "codecrush",
   "version": "1.0.0",
   "description": "a place where developers can connect",
-  "main": "index.js",
+  "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js"
