@@ -97,10 +97,13 @@ userRouter.get("/feed", userAuth, async (req, res) => {
 // Get public user details by ID
 userRouter.get("/users/:id", async (req, res) => {
   try {
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+    
     const user = await User.findById(req.params.id)
-      .select(USER_SAFE_DATA + ' codeSnippetIds codeReviewIds')
-      .populate('codeSnippetIds')
-      .populate('codeReviewIds');
+      .select(USER_SAFE_DATA);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
