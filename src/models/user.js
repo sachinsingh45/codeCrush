@@ -103,8 +103,14 @@ const userSchema = new mongoose.Schema(
                 message: 'GitHub must be a valid URL',
             },
         },
-        codeSnippetIds: [{ type: Schema.Types.ObjectId, ref: 'CodeSnippet', default: [] }],
-        codeReviewIds: [{ type: Schema.Types.ObjectId, ref: 'SnippetReview', default: [] }],
+        xp: {
+            type: Number,
+            default: 0,
+        },
+        upvotesGained: {
+            type: Number,
+            default: 0,
+        },
     },
     { 
         timestamps: true,
@@ -124,22 +130,9 @@ userSchema.methods.validatePassword = async function(password){
     return isMatch;
 };
 
-userSchema.virtual('codeSnippetsPublished', {
-  ref: 'CodeSnippet',
-  localField: '_id',
-  foreignField: 'author',
-  justOne: false
-});
-
-userSchema.virtual('codeSnippetsReviewed', {
-  ref: 'SnippetReview',
-  localField: '_id',
-  foreignField: 'reviewer',
-  justOne: false
-});
-
-userSchema.set('toObject', { virtuals: true });
-userSchema.set('toJSON', { virtuals: true });
+// Remove virtuals as they're not being used in the frontend
+userSchema.set('toObject', { virtuals: false });
+userSchema.set('toJSON', { virtuals: false });
 
 const User = mongoose.model('User', userSchema);
 module.exports = User;

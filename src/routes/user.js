@@ -156,22 +156,14 @@ userRouter.get('/review-stats/:userId', async (req, res) => {
     // Build query to match both string and ObjectId
     const reviewerQuery = userObjId ? { $or: [{ reviewer: userId }, { reviewer: userObjId }] } : { reviewer: userId };
     const authorQuery = userObjId ? { $or: [{ author: userId }, { author: userObjId }] } : { author: userId };
-    // Logging for debugging
-    console.log('userId:', userId);
-    console.log('reviewerQuery:', reviewerQuery);
-    console.log('authorQuery:', authorQuery);
-    // Total reviews written
-    const totalReviews = await SnippetReview.countDocuments(reviewerQuery) || 0;
-    const reviews = await SnippetReview.find(reviewerQuery);
-    console.log('reviews:', reviews);
-    // Total upvotes received on reviews
+    
+    const [totalReviews, reviews, totalCodeReviewsAsked] = await Promise.all([
+      SnippetReview.countDocuments(reviewerQuery),
+      SnippetReview.find(reviewerQuery),
+      CodeSnippet.countDocuments(authorQuery)
+    ]);
     const totalReviewUpvotes = reviews.reduce((sum, r) => sum + (r.upvotes || 0), 0);
-    // Total code snippets reviewed (unique snippets)
     const totalSnippetsReviewed = new Set(reviews.map(r => String(r.snippet))).size || 0;
-    // Total code reviews asked (snippets authored)
-    const totalCodeReviewsAsked = await CodeSnippet.countDocuments(authorQuery) || 0;
-    const codeSnippets = await CodeSnippet.find(authorQuery);
-    console.log('codeSnippets:', codeSnippets);
     res.json({
       totalReviews,
       totalReviewUpvotes,

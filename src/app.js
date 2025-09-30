@@ -64,7 +64,6 @@ app.use("/", profileRouter);
 app.use("/", requestRouter);
 app.use("/", userRouter);
 app.use("/", blogRouter);
-app.use("/", chatRouter);
 app.use("/code-review", codeReviewRouter);
 
 const server = http.createServer(app);
@@ -72,19 +71,25 @@ initializeSocket(server);
 
 connectDB()
   .then(() => {
-    console.log("Database connection established...");
+    if (process.env.NODE_ENV !== 'production') {
+      console.log("Database connection established...");
+    }
     server.listen(process.env.PORT, () => {
-      console.log(`Server is successfully listening on port ${process.env.PORT}...`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Server is successfully listening on port ${process.env.PORT}...`);
+      }
     });
   })
   .catch((err) => {
-    console.error("Database cannot be connected!!");
+    if (process.env.NODE_ENV !== 'production') {
+      console.error("Database cannot be connected!");
+    }
+    process.exit(1);
   });
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error('Error:', err.message);
-  console.error('Stack:', err.stack);
+  // console.error('Error:', err.message);
   
   // Don't expose internal errors in production
   const message = process.env.NODE_ENV === 'production' 

@@ -81,8 +81,8 @@ const blogSchema = new mongoose.Schema(
         status: {
             type: String,
             enum: {
-                values: ["draft", "published", "archived"],
-                message: "Status must be either 'draft', 'published', or 'archived'",
+                values: ["draft", "published"],
+                message: "Status must be either 'draft' or 'published'",
             },
             default: "published",
         },

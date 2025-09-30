@@ -1,7 +1,6 @@
 const socket = require("socket.io");
 const crypto = require("crypto");
 const { Chat } = require("../models/chat");
-const ConnectionRequest = require("../models/connectionRequest");
 
 const getSecretRoomId = (userId, targetUserId) => {
   return crypto
@@ -9,8 +8,6 @@ const getSecretRoomId = (userId, targetUserId) => {
     .update([userId, targetUserId].sort().join("$"))
     .digest("hex");
 };
-
-const onlineUsers = new Map();
 
 const initializeSocket = (server) => {
   const io = socket(server, {
@@ -26,114 +23,58 @@ const initializeSocket = (server) => {
     },
   });
 
-  console.log('Socket.io server initialized with CORS origins:', io.engine.opts.cors.origin);
-
   io.on("connection", (socket) => {
-    // Track userId for this socket
-    let currentUserId = null;
-
-    // Emit the current list of online users to the newly connected client
-    socket.emit("onlineUsers", Array.from(onlineUsers.keys()));
-
-    // Handle userConnected event for global online status
-    socket.on("userConnected", ({ userId }) => {
-      if (userId) {
-        currentUserId = userId;
-        onlineUsers.set(userId, socket.id);
-        io.emit("userOnline", { userId });
-      }
-    });
-
-    socket.on("joinChat", async ({ firstName, userId, targetUserId }) => {
+    socket.on("joinChat", ({ userId, targetUserId }) => {
       const roomId = getSecretRoomId(userId, targetUserId);
       socket.join(roomId);
-      currentUserId = userId;
-      // Mark user as online
-      onlineUsers.set(userId, socket.id);
-      // Broadcast online status to all participants
-      io.emit("userOnline", { userId });
     });
 
-    socket.on(
-      "sendMessage",
-      async ({ firstName, lastName, userId, targetUserId, text }) => {
-        try {
-          const roomId = getSecretRoomId(userId, targetUserId);
-          let chat = await Chat.findOne({
-            participants: { $all: [userId, targetUserId] },
-          });
-          if (!chat) {
-            chat = new Chat({
-              participants: [userId, targetUserId],
-              messages: [],
-            });
-          }
-          chat.messages.push({
-            senderId: userId,
-            text,
-            seenBy: [userId], // Only sender has seen it
-          });
-          await chat.save();
-          const lastMsg = chat.messages[chat.messages.length - 1];
-          io.to(roomId).emit("messageReceived", {
-            firstName,
-            lastName,
-            text,
-            createdAt: lastMsg.createdAt,
-            updatedAt: lastMsg.updatedAt
-          });
-          // Emit unseen count to target user
-          emitUnseenCount(io, targetUserId);
-        } catch (err) {
-          console.log(err);
-        }
-      }
-    );
-
-    // Mark all messages as seen in a chat
-    socket.on("markAsSeen", async ({ userId, targetUserId }) => {
+    socket.on("sendMessage", async ({ firstName, lastName, userId, targetUserId, text }) => {
       try {
-        const chat = await Chat.findOne({ participants: { $all: [userId, targetUserId] } });
-        if (chat) {
-          let updated = false;
-          chat.messages.forEach(msg => {
-            if (!msg.seenBy.includes(userId)) {
-              msg.seenBy.push(userId);
-              updated = true;
-            }
+        const roomId = getSecretRoomId(userId, targetUserId);
+        
+        // Ensure sender joins the room (for share-to-chat scenarios)
+        socket.join(roomId);
+        
+        let chat = await Chat.findOne({
+          participants: { $all: [userId, targetUserId] },
+        });
+        
+        if (!chat) {
+          chat = new Chat({
+            participants: [userId, targetUserId],
+            messages: [],
           });
-          if (updated) await chat.save();
         }
-        emitUnseenCount(io, userId);
+        
+        chat.messages.push({
+          senderId: userId,
+          text,
+        });
+        
+        await chat.save();
+        const lastMsg = chat.messages[chat.messages.length - 1];
+        
+        io.to(roomId).emit("messageReceived", {
+          firstName,
+          lastName,
+          text,
+          createdAt: lastMsg.createdAt,
+          updatedAt: lastMsg.updatedAt
+        });
       } catch (err) {
-        console.log(err);
+        // Silent error handling for production
       }
     });
 
     socket.on("disconnect", (reason) => {
-      if (currentUserId) {
-        onlineUsers.delete(currentUserId);
-        io.emit("userOffline", { userId: currentUserId });
-      }
-      console.log('Client disconnected:', socket.id, 'Reason:', reason);
+      // Client disconnected
     });
     
     socket.on("error", (error) => {
-      console.error('Socket error:', error);
+      // Socket error occurred
     });
   });
 };
-
-// Helper to emit unseen message count for all chats of a user
-async function emitUnseenCount(io, userId) {
-  const chats = await Chat.find({ participants: userId });
-  const unseenCounts = {};
-  chats.forEach(chat => {
-    const otherId = chat.participants.find(id => id.toString() !== userId);
-    const unseen = chat.messages.filter(msg => !msg.seenBy.includes(userId)).length;
-    unseenCounts[otherId] = unseen;
-  });
-  io.to(onlineUsers.get(userId)).emit("unseenCounts", unseenCounts);
-}
 
 module.exports = initializeSocket;

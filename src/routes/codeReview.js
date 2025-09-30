@@ -136,25 +136,61 @@ codeReviewRouter.get('/snippet/:id', async (req, res) => {
   }
 });
 
-// AI summary endpoint
+// Generate AI summary for code snippet reviews
 codeReviewRouter.post('/snippet/:id/ai-summary', userAuth, async (req, res) => {
   try {
-    const snippet = await CodeSnippet.findById(req.params.id).populate('reviews');
-    if (!snippet) return res.status(404).json({ message: 'Snippet not found' });
-    if (snippet.reviews.length < 3) {
-      return res.status(400).json({ message: 'At least 3 reviews required for summary.' });
+    // Fetch snippet (without populating reviews to keep them as IDs)
+    const snippet = await CodeSnippet.findById(req.params.id);
+    
+    if (!snippet) {
+      return res.status(404).json({ message: 'Snippet not found' });
     }
-    // Get top 3 reviews by upvotes
-    const reviewsPopulated = await SnippetReview.find({ _id: { $in: snippet.reviews } });
-    const topReviews = reviewsPopulated
+    
+    // Validate minimum review count
+    const MIN_REVIEWS_REQUIRED = 3;
+    if (snippet.reviews.length < MIN_REVIEWS_REQUIRED) {
+      return res.status(400).json({ 
+        message: `AI summary requires at least ${MIN_REVIEWS_REQUIRED} reviews. Currently has ${snippet.reviews.length} review(s).` 
+      });
+    }
+    
+    // Verify Cohere API key is configured
+    if (!process.env.COHERE_API_KEY) {
+      return res.status(503).json({ 
+        message: 'AI summary service is not configured. Please contact the administrator.' 
+      });
+    }
+    
+    // Fetch review documents from IDs
+    const reviewDocuments = await SnippetReview.find({ 
+      _id: { $in: snippet.reviews } 
+    });
+    
+    if (reviewDocuments.length === 0) {
+      return res.status(400).json({ message: 'No reviews found for this snippet.' });
+    }
+    
+    // Get top 3 reviews sorted by upvotes
+    const TOP_REVIEWS_COUNT = 3;
+    const topReviewTexts = reviewDocuments
       .sort((a, b) => b.upvotes - a.upvotes)
-      .slice(0, 3)
-      .map(r => r.review);
-    const summary = await generateAISummary(topReviews);
-    // Do NOT save summary to snippet, just return it
-    res.json({ summary });
+      .slice(0, TOP_REVIEWS_COUNT)
+      .map(review => review.review);
+    
+    // Generate AI summary
+    const summary = await generateAISummary(topReviewTexts);
+    
+    return res.json({ summary });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    if (err.message === 'Cohere API key not set') {
+      return res.status(503).json({ 
+        message: 'AI summary service is not configured.' 
+      });
+    }
+    
+    return res.status(500).json({ 
+      message: 'Failed to generate AI summary. Please try again later.' 
+    });
   }
 });
 
