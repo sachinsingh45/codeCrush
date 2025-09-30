@@ -24,7 +24,9 @@ chatRouter.get("/chat/:targetUserId", userAuth, async (req, res) => {
     }
     res.json(chat);
   } catch (err) {
-    console.error("Chat fetch error:", err);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error("Chat fetch error:", err);
+    }
     res.status(500).json({ message: "Failed to fetch chat", error: err.message });
   }
 });
