@@ -6,17 +6,37 @@ const cors = require("cors");
 const http = require("http");
 
 require("dotenv").config();
+
+// CORS configuration
+const allowedOrigins = [
+  "http://localhost:5173",          
+  "https://code-crush-frontend-psi.vercel.app", 
+  "https://code-crush-frontend-git-main-sachin-singhs-projects-a8578191.vercel.app",
+  "https://code-crush-frontend-i990ukqz7-sachin-singhs-projects-a8578191.vercel.app"     
+];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",          
-      "https://code-crush-frontend-psi.vercel.app", 
-      "https://code-crush-frontend-git-main-sachin-singhs-projects-a8578191.vercel.app",
-      "https://code-crush-frontend-i990ukqz7-sachin-singhs-projects-a8578191.vercel.app"     
-    ],
+    origin: function(origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    exposedHeaders: ['Set-Cookie'],
+    maxAge: 86400 // 24 hours
   })
 );
+
+// Handle preflight requests explicitly
+app.options('*', cors());
 
 app.use(express.json());
 app.use(cookieParser());
