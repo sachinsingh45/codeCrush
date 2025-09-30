@@ -84,6 +84,7 @@ app.use("/", profileRouter);
 app.use("/", requestRouter);
 app.use("/", userRouter);
 app.use("/", blogRouter);
+app.use("/", chatRouter);
 app.use("/code-review", codeReviewRouter);
 
 const server = http.createServer(app);
