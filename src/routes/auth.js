@@ -5,6 +5,17 @@ const { validateSignUpData } = require("../utils/validation");
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
 
+// Cookie configuration helper
+const getCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: isProduction, // true in production (HTTPS required)
+    sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-origin in production
+    maxAge: 8 * 3600000, // 8 hours
+  };
+};
+
 authRouter.post("/signup", async (req, res) => {
   try {
     // Validation of data
@@ -26,12 +37,7 @@ authRouter.post("/signup", async (req, res) => {
     const savedUser = await user.save();
     const token = await savedUser.getJWT();
 
-    res.cookie("token", token, {
-      expires: new Date(Date.now() + 8 * 3600000),
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      httpOnly: true
-    });
+    res.cookie("token", token, getCookieOptions());
 
     res.json({ message: "User Added successfully!", data: savedUser });
   } catch (err) {
@@ -52,12 +58,7 @@ authRouter.post("/login", async (req, res) => {
     if (isPasswordValid) {
       const token = await user.getJWT();
 
-      res.cookie("token", token, {
-        expires: new Date(Date.now() + 8 * 3600000),
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        httpOnly: true
-      });
+      res.cookie("token", token, getCookieOptions());
       res.send(user);
     } else {
       throw new Error("Invalid credentials");
@@ -68,13 +69,22 @@ authRouter.post("/login", async (req, res) => {
 });
 
 authRouter.post("/logout", async (req, res) => {
-  res.cookie("token", null, {
-    expires: new Date(Date.now()),
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    httpOnly: true
-  });
+  res.clearCookie("token", getCookieOptions());
   res.send("Logout Successful!!");
+});
+
+// Debug endpoint to check cookie and environment configuration
+authRouter.get("/auth/debug", (req, res) => {
+  const hasToken = !!req.cookies.token;
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  res.json({
+    environment: process.env.NODE_ENV || 'not set',
+    isProduction,
+    cookieSettings: getCookieOptions(),
+    hasToken,
+    timestamp: new Date().toISOString()
+  });
 });
 
 module.exports = authRouter;
